@@ -9,6 +9,7 @@ const MetallibStep = @import("MetallibStep.zig");
 const UnicodeTables = @import("UnicodeTables.zig");
 const GhosttyFrameData = @import("GhosttyFrameData.zig");
 const DistResource = @import("GhosttyDist.zig").Resource;
+const GhosttyShaders = @import("GhosttyShaders.zig");
 const gtk_helpers = @import("gtk.zig");
 
 config: *const Config,
@@ -19,6 +20,7 @@ metallib: ?*MetallibStep,
 unicode_tables: UnicodeTables,
 framedata: GhosttyFrameData,
 uucode_tables: std.Build.LazyPath,
+shaders: GhosttyShaders,
 
 /// Singleton uucode module, instantiated once in `init` and reused
 /// everywhere so that ghostty and vaxis share the same compiled tables in
@@ -83,6 +85,7 @@ pub fn init(b: *std.Build, cfg: *const Config) !SharedDeps {
         .framedata = try .init(b),
         .uucode_tables = uucode_tables,
         .uucode_mod = uucode_mod,
+        .shaders = try .init(b, b.path("src/renderer/shaders/shaders.slang")),
 
         // Setup by retarget
         .options = undefined,
@@ -132,7 +135,7 @@ fn initTarget(
     self.metallib = .create(b, .{
         .name = "Ghostty",
         .target = target,
-        .sources = &.{b.path("src/renderer/shaders/shaders.metal")},
+        .sources = &.{self.shaders.msl},
     });
 
     // Change our config
@@ -659,6 +662,16 @@ pub fn add(
             .file = b.path("vendor/glad/src/gl.c"),
             .flags = &.{},
         });
+
+        // Add generated OpenGL shaders
+        var glsl = self.shaders.glsl;
+        var it = glsl.iterator();
+        while (it.next()) |entry| {
+            const file = b.fmt("{t}.glsl", .{entry.key});
+            step.root_module.addAnonymousImport(file, .{
+                .root_source_file = entry.value.*,
+            });
+        }
 
         // Link EGL for GTK.
         if (self.config.app_runtime == .gtk) {

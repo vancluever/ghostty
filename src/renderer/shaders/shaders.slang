@@ -27,6 +27,9 @@ struct Uniforms {
     bool use_linear_correction() {
         return (bools & BoolFlags.UseLinearCorrection) != BoolFlags.None;
     }
+    bool bg_layout_origin_upper_left() {
+        return (bools & BoolFlags.BgLayoutOriginUpperLeft) != BoolFlags.None;
+    }
 };
 
 [[vk::binding(0, 0)]] Sampler2D           imageTexture;
@@ -47,6 +50,7 @@ enum BoolFlags : uint {
     UseDisplayP3,
     UseLinearBlending,
     UseLinearCorrection,
+    BgLayoutOriginUpperLeft,
 };
 
 // Padding extend enum
@@ -452,6 +456,12 @@ BgImageVertexOut bg_image_vertex(
 
 [shader("fragment")]
 float4 bg_image_fragment(BgImageVertexOut in) : SV_Target {
+    // Correct our y-position if our origin is in the upper left
+    // (essentially a layout(origin_upper_left)" OpenGL polyfill).
+    if (uniforms.bg_layout_origin_upper_left()) {
+      in.position.y = uniforms.screen_size.y - in.position.y;
+    }
+
     // Our texture coordinate is based on the screen position, offset by the
     // dest rect origin, and scaled by the ratio between the dest rect size
     // and the original texture size, which effectively scales the original
@@ -503,6 +513,12 @@ float4 bg_image_fragment(BgImageVertexOut in) : SV_Target {
 
 [shader("fragment")]
 float4 cell_bg_fragment(float4 in : SV_Position) : SV_Target {
+    // Correct our y-position if our origin is in the upper left
+    // (essentially a layout(origin_upper_left)" OpenGL polyfill).
+    if (uniforms.bg_layout_origin_upper_left()) {
+      in.y = uniforms.screen_size.y - in.y;
+    }
+
     uint2 grid_size = unpack2u16(uniforms.grid_size_packed_2u16);
     int2 grid_pos = int2(floor((in.xy - uniforms.grid_padding.wx) / uniforms.cell_size));
 

@@ -252,6 +252,11 @@ pub const Uniforms = extern struct {
         /// with linear alpha blending have a similar apparent weight
         /// (thickness) to gamma-incorrect blending.
         use_linear_correction: bool align(1) = false,
+
+        /// Inverts and offsets certain background fragment shaders on the
+        /// y-axis to ensure the correct co-ordinate data is used. Should never
+        /// need to be modified and is only used on OpenGL.
+        bg_layout_origin_upper_left: bool align(1) = false,
     },
 
     const PaddingExtend = packed struct(u8) {
